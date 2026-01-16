@@ -19,7 +19,7 @@ A CLI tool for IT technicians to automate Android device diagnostics and secure 
 
 1. Clone the repository:
    ```bash
-   git clone <repository_url>
+   git clone <https://github.com/Salman-Shamshad/Android-Backup-Buddy-ABB->
    cd "Android Backup Buddy"
    ```
 
@@ -40,8 +40,13 @@ Follow the on-screen prompts to:
 2.  **Select Device**: If multiple devices are found, choose one from the list.
 3.  **Device Menu**:
     *   **1. Device Report**: Generates and displays a diagnostics report (saved in `reports/` folder).
-    *   **2. Device Backup**: Choose between "Pic Only" (/sdcard/DCIM) or "All Data" (/sdcard) to backup and encrypt.
-    *   **3. Restore Backup**: Restore a backup (.enc or .zip) to the device.
+    *   **2. Device Backup**: Choose between "Pic Only", "All Data", "Contacts", or "SMS".
+        *   Contacts saved to `backups/contacts/` (Auto-Importable `.vcf`)
+        *   SMS saved to `backups/messages/` (Restorable `.json`)
+    *   **3. Restore Backup**: Restore a backup to the device.
+        *   Supports `.enc` / `.zip` for file backups.
+        *   Supports `.vcf` for Contacts (Triggers Import Intent).
+        *   Supports `.json` for SMS (Inserts into SMS Database).
     *   **4. Developer Options**: Decrypt an existing encrypted backup for manual inspection.
 
 ### Advanced Usage (CLI Flags)

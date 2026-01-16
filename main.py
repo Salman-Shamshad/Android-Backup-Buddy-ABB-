@@ -84,13 +84,34 @@ def interactive_mode():
                     print("\n--- Backup Selection ---")
                     print("1. Pic Only (Backs up /sdcard/DCIM)")
                     print("2. All Data (Backs up /sdcard)")
+                    print("3. Contacts (Text Dump)")
+                    print("4. SMS (Text Dump)")
                     
                     bk_choice = input("Select backup type: ").strip()
                     source = None
+                    
                     if bk_choice == '1':
                         source = "/sdcard/DCIM"
                     elif bk_choice == '2':
                         source = "/sdcard"
+                    elif bk_choice == '3':
+                        print("Backing up contacts...")
+                        bm = BackupManager(selected_device)
+                        res = bm.backup_contacts() # Defaults to backups/contacts
+                        if res:
+                            print(f"Contacts Backup Complete! File: {res}")
+                        else:
+                            print("Contacts Backup failed.")
+                        continue # Skip the general source logic
+                    elif bk_choice == '4':
+                        print("Backing up SMS...")
+                        bm = BackupManager(selected_device)
+                        res = bm.backup_sms() # Defaults to backups/messages
+                        if res:
+                            print(f"SMS Backup Complete! File: {res}")
+                        else:
+                            print("SMS Backup failed.")
+                        continue
                     
                     if source:
                         print(f"Starting backup of {source}...")
@@ -107,7 +128,8 @@ def interactive_mode():
                 elif sub_choice == '3':
                     # Restore
                     print("\n--- Restore Backup ---")
-                    backup_path = input("Enter path to backup file (.enc or .zip): ").strip()
+                    print("Supported formats: .enc (Encrypted Zip), .zip (Standard), .vcf (Contacts), .json (SMS)")
+                    backup_path = input("Enter path to backup file: ").strip()
                     if os.path.exists(backup_path):
                         print(f"Restoring {backup_path} to device...")
                         bm = BackupManager(selected_device)
