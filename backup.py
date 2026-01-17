@@ -141,7 +141,12 @@ class BackupManager:
                 "content", "query", "--uri", "content://com.android.contacts/data/phones", 
                 "--projection", "display_name:data1"
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True) # check=False manually
+            
+            if result.returncode != 0:
+                logging.error(f"ADB command failed (Exit code {result.returncode}): {result.stderr.strip()}")
+                self._cleanup_empty_dir(dest_folder)
+                return None
             
             lines = result.stdout.strip().split('\n')
             vcard_content = []
@@ -177,11 +182,9 @@ class BackupManager:
             logging.info(f"Contacts saved to {filepath}")
             return filepath
 
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Failed to query contacts: {e}")
-            return None
         except Exception as e:
             logging.error(f"Contacts backup failed: {e}")
+            self._cleanup_empty_dir(dest_folder)
             return None
 
     def backup_sms(self, dest_folder="backups/messages"):
@@ -205,7 +208,12 @@ class BackupManager:
                 "content", "query", "--uri", "content://sms",
                 "--projection", "address:date:body:type"
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                logging.error(f"ADB command failed (Exit code {result.returncode}): {result.stderr.strip()}")
+                self._cleanup_empty_dir(dest_folder)
+                return None
             
             lines = result.stdout.strip().split('\n')
             sms_list = []
@@ -250,12 +258,131 @@ class BackupManager:
             logging.info(f"SMS saved to {filepath}")
             return filepath
 
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Failed to query SMS: {e}")
-            return None
         except Exception as e:
             logging.error(f"SMS backup failed: {e}")
+            self._cleanup_empty_dir(dest_folder)
             return None
+
+    def backup_call_logs(self, dest_folder="backups/call_logs"):
+        """
+        Backs up Call Logs by querying the call_log content provider.
+        Saves as a JSON file.
+        """
+        import json
+        if not os.path.exists(dest_folder):
+            os.makedirs(dest_folder)
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"call_logs_{self.device_id}_{timestamp}.json"
+        filepath = os.path.join(dest_folder, filename)
+        
+        try:
+            logging.info(f"Querying Call Logs from device {self.device_id}...")
+            # Query Call Logs
+            cmd = [
+                "adb", "-s", self.device_id, "shell",
+                "content", "query", "--uri", "content://call_log/calls",
+                "--projection", "number:date:duration:type:name"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                logging.error(f"ADB command failed (Exit code {result.returncode}): {result.stderr.strip()}")
+                self._cleanup_empty_dir(dest_folder)
+                return None
+            
+            lines = result.stdout.strip().split('\n')
+            calls_list = []
+            
+            for line in lines:
+                if "Row:" in line:
+                    call = {"number": "", "date": "0", "duration": "0", "type": "1", "name": ""}
+                    
+                    try:
+                        # Simple parsing, assuming comma separation isn't broken by content
+                        # A more robust parser might be needed for complex content
+                        parts = line.split(", ")
+                        for part in parts:
+                            if "number=" in part:
+                                call["number"] = part.split("number=")[-1].strip()
+                            elif "date=" in part:
+                                call["date"] = part.split("date=")[-1].strip()
+                            elif "duration=" in part:
+                                call["duration"] = part.split("duration=")[-1].strip()
+                            elif "type=" in part:
+                                call["type"] = part.split("type=")[-1].strip()
+                            elif "name=" in part:
+                                call["name"] = part.split("name=")[-1].strip()
+                    except:
+                        pass
+                    
+                    if call["number"]:
+                        calls_list.append(call)
+            
+            with open(filepath, "w") as f:
+                json.dump(calls_list, f, indent=4)
+                
+            logging.info(f"Call Logs saved to {filepath}")
+            return filepath
+
+        except Exception as e:
+            logging.error(f"Call Logs backup failed: {e}")
+            self._cleanup_empty_dir(dest_folder)
+            return None
+
+    def backup_settings(self, dest_folder="backups/settings"):
+        """
+        Backs up system, global, and secure settings using 'adb shell settings list'.
+        Saves as text files.
+        """
+        if not os.path.exists(dest_folder):
+            os.makedirs(dest_folder)
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_filename = f"settings_{self.device_id}_{timestamp}"
+        
+        saved_files = []
+        namespaces = ["system", "global", "secure"]
+        
+        try:
+            logging.info(f"Backing up settings from device {self.device_id}...")
+            
+            for ns in namespaces:
+                filepath = os.path.join(dest_folder, f"{base_filename}_{ns}.txt")
+                cmd = ["adb", "-s", self.device_id, "shell", "settings", "list", ns]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    logging.warning(f"Failed to backup {ns} settings: {result.stderr.strip()}")
+                    continue # Try next namespace
+                
+                with open(filepath, "w") as f:
+                    f.write(result.stdout)
+                
+                saved_files.append(filepath)
+            
+            if not saved_files:
+                logging.error("No settings backed up.")
+                self._cleanup_empty_dir(dest_folder)
+                return None
+                
+            logging.info(f"Settings saved to {dest_folder}")
+            return saved_files
+
+        except Exception as e:
+            logging.error(f"Settings backup failed: {e}")
+            self._cleanup_empty_dir(dest_folder)
+            return None
+
+    def _cleanup_empty_dir(self, dir_path):
+        """Helper to remove directory if empty."""
+        try:
+            if os.path.exists(dir_path) and not os.listdir(dir_path):
+                os.rmdir(dir_path)
+                logging.info(f"Cleaned up empty directory: {dir_path}")
+        except Exception:
+            pass
 
     def restore_backup(self, backup_path, device_dest="/sdcard/"):
         """

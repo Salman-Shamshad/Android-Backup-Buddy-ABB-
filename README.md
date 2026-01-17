@@ -7,6 +7,8 @@ A CLI tool for IT technicians to automate Android device diagnostics and secure 
 - **Device Detection**: Automatically detects connected Android devices via ADB.
 - **Diagnostics**: Generates reports on device model, Android version, battery status, and storage usage.
 - **Secure Backup**: Pulls data from the device, creates a zip archive, and encrypts it with AES-256.
+- **Call Logs**: Backs up call history to JSON.
+- **Mobile Settings**: Dumps system, global, and secure settings to text files.
 - **Cross-Platform**: Built with Python, runs on Linux, Windows, and macOS.
 
 ## Prerequisites

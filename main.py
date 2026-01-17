@@ -86,6 +86,8 @@ def interactive_mode():
                     print("2. All Data (Backs up /sdcard)")
                     print("3. Contacts (Text Dump)")
                     print("4. SMS (Text Dump)")
+                    print("5. Call Logs (Text Dump)")
+                    print("6. Mobile Settings (System/Global/Secure)")
                     
                     bk_choice = input("Select backup type: ").strip()
                     source = None
@@ -111,6 +113,26 @@ def interactive_mode():
                             print(f"SMS Backup Complete! File: {res}")
                         else:
                             print("SMS Backup failed.")
+                        continue
+                    elif bk_choice == '5':
+                        print("Backing up Call Logs...")
+                        bm = BackupManager(selected_device)
+                        res = bm.backup_call_logs() # Defaults to backups/call_logs
+                        if res:
+                            print(f"Call Logs Backup Complete! File: {res}")
+                        else:
+                            print("Call Logs Backup failed.")
+                        continue
+                    elif bk_choice == '6':
+                        print("Backing up Mobile Settings...")
+                        bm = BackupManager(selected_device)
+                        res = bm.backup_settings() # Defaults to backups/settings
+                        if res:
+                            print(f"Mobile Settings Backup Complete! Saved to: {os.path.dirname(res[0])}")
+                            for f in res:
+                                print(f" - {os.path.basename(f)}")
+                        else:
+                            print("Mobile Settings Backup failed.")
                         continue
                     
                     if source:
